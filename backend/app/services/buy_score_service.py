@@ -24,10 +24,13 @@ class BuyScoreService:
         ath_price: float,
         low_52w: float,
         high_52w: float,
-        history_records: List[Dict[str, Any]]
+        history_records: List[Dict[str, Any]],
+        asset_type: str = "ETF"
     ) -> Tuple[int, str, List[str]]:
         """
         Calculates a score from 1 to 100 representing buy opportunity.
+        For Mutual Funds (SIPs), >= 6% drop from peak is a major correction, scaling to max points at 10%.
+        For ETFs, max points are reached at 18% drop.
         Returns: (score, recommendation_string, list_of_reasons)
         """
         if ath_price <= 0 or current_price <= 0:
@@ -38,12 +41,29 @@ class BuyScoreService:
 
         # Factor 1: Distance from ATH (Max 40 points)
         down_from_ath_pct = max(0.0, ((ath_price - current_price) / ath_price) * 100.0)
-        ath_points = min(40.0, (down_from_ath_pct / 25.0) * 40.0)
+        
+        if asset_type == "MUTUAL_FUND":
+            # For Mutual Funds (SIPs), >= 4.5% drop is a major correction guaranteeing entry into Buy category (>= 60 score)
+            if down_from_ath_pct >= 4.5:
+                ath_points = min(40.0, 32.0 + ((down_from_ath_pct - 4.5) / 3.5) * 8.0)
+            else:
+                ath_points = (down_from_ath_pct / 4.5) * 32.0
+        else:
+            # For ETFs, max points are reached at 18% drop
+            ath_points = min(40.0, (down_from_ath_pct / 18.0) * 40.0)
+            
         score += ath_points
-        if down_from_ath_pct >= 15.0:
-            reasons.append(f"{round(down_from_ath_pct, 1)}% below ATH")
-        elif down_from_ath_pct >= 5.0:
-            reasons.append(f"Trading {round(down_from_ath_pct, 1)}% off peak")
+
+        if asset_type == "MUTUAL_FUND":
+            if down_from_ath_pct >= 4.5:
+                reasons.append(f"Major MF Dip ({round(down_from_ath_pct, 1)}% below peak)")
+            elif down_from_ath_pct >= 2.0:
+                reasons.append(f"Trading {round(down_from_ath_pct, 1)}% off peak")
+        else:
+            if down_from_ath_pct >= 15.0:
+                reasons.append(f"{round(down_from_ath_pct, 1)}% below ATH")
+            elif down_from_ath_pct >= 5.0:
+                reasons.append(f"Trading {round(down_from_ath_pct, 1)}% off peak")
 
         # Factor 2: 52-Week Low Proximity (Max 20 points)
         range_52w = max(0.01, high_52w - low_52w)
@@ -92,12 +112,16 @@ class BuyScoreService:
 
         final_score = int(max(1, min(100, round(score))))
 
+        # Guarantee for Mutual Funds (SIPs): >= 4.5% loss from peak automatically places it in the Buy category (score >= 60)
+        if asset_type == "MUTUAL_FUND" and down_from_ath_pct >= 4.5:
+            final_score = max(60, final_score)
+
         # Recommendation classification
         if final_score >= 80:
             recommendation = "Strong Buy"
-        elif final_score >= 65:
+        elif final_score >= 60:
             recommendation = "Buy"
-        elif final_score >= 45:
+        elif final_score >= 40:
             recommendation = "Hold"
         else:
             recommendation = "Avoid"

@@ -99,7 +99,7 @@ function createRowHTML(item, isRetryRow = false) {
     if (isError)                         dipBadge = "badge-red";
 
     let scoreBadge = "badge-blue";
-    if (item.buy_score >= 80) scoreBadge = "badge-green";
+    if (item.buy_score >= 60) scoreBadge = "badge-green";
     else if (item.buy_score <= 40) scoreBadge = "badge-red";
 
     const todayPct = parseFloat(item.today_change_pct || 0);
@@ -259,6 +259,10 @@ function renderDirectResult(data) {
     const todayColor = todayPct >= 0 ? "text-emerald-400" : "text-rose-400";
     const todaySign = todayPct >= 0 ? "▲" : "▼";
 
+    let scoreBadgeCls = "badge-blue";
+    if (data.buy_score >= 60) scoreBadgeCls = "badge-green";
+    else if (data.buy_score <= 40) scoreBadgeCls = "badge-red";
+
     container.innerHTML = `
         <div style="grid-column:span 2;">
             <div style="font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:.05em;">Scheme / Asset</div>
@@ -279,7 +283,7 @@ function renderDirectResult(data) {
             <div style="font-size:10px;color:#94a3b8;text-transform:uppercase;">Dip &amp; Score</div>
             <div style="display:flex;align-items:center;gap:6px;margin-top:5px;flex-wrap:wrap;">
                 <span class="${badgeCls}" style="font-size:11px;padding:2px 7px;border-radius:4px;font-weight:700;">-${data.down_pct}%</span>
-                <span class="badge-blue" style="font-size:11px;padding:2px 7px;border-radius:4px;font-weight:700;">${data.buy_score}/100</span>
+                <span class="${scoreBadgeCls}" style="font-size:11px;padding:2px 7px;border-radius:4px;font-weight:700;">${data.buy_score}/100</span>
             </div>
             <div style="font-size:10px;color:#64748b;margin-top:3px;">${data.buy_recommendation}</div>
         </div>

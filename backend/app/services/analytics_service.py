@@ -166,7 +166,8 @@ class AnalyticsService:
                 cur_price, ath_price,
                 _safe(mdata.get("low_52w", cur_price * 0.85)),
                 _safe(mdata.get("high_52w", ath_price)),
-                history
+                history,
+                asset_type=h.asset_type
             )
 
             results.append({

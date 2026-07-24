@@ -76,11 +76,13 @@ def analyze_asset_on_the_fly(
         color_status = "Red"
 
     history = mdata.get("history", [])
+    resolved_type = mdata.get("asset_type", resolved_asset_type or "MUTUAL_FUND")
     b_score, b_rec, b_reasons = BuyScoreService.calculate_buy_score(
         cur_p, ath_p,
         mdata.get("low_52w", cur_p * 0.85),
         mdata.get("high_52w", ath_p),
-        history
+        history,
+        asset_type=resolved_type
     )
 
     return {
