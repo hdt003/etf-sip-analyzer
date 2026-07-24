@@ -92,14 +92,14 @@ def startup_event():
                 ("ETF", "GROWWPOWER.NS", "Groww BSE Power ETF", "NSE", "Thematic", "Groww Mutual Fund"),
                 ("ETF", "MOCAPITAL.NS", "Motilal Oswal Nifty Capital Market ETF", "NSE", "Thematic", "Motilal Oswal Mutual Fund"),
                 ("ETF", "MASPTOP50.NS", "Mirae Asset S&P 500 Top 50 ETF", "NSE", "International", "Mirae Asset Mutual Fund"),
+                ("ETF", "VAL30IETF.NS", "ICICI Prudential Nifty200 Value 30 ETF", "NSE", "Factor / Value", "ICICI Prudential Mutual Fund"),
                 ("MUTUAL_FUND", "125494", "SBI Small Cap Fund - Regular Plan - Growth", "MFAPI", "Small Cap", "SBI Mutual Fund"),
                 ("MUTUAL_FUND", "144548", "Tata Flexi Cap Fund - Regular Plan - Growth", "MFAPI", "Flexi Cap", "Tata Mutual Fund"),
                 ("MUTUAL_FUND", "118955", "HDFC Flexi Cap Fund - Direct Plan - Growth", "MFAPI", "Flexi Cap", "HDFC Mutual Fund"),
                 ("MUTUAL_FUND", "147844", "Aditya Birla Sun Life PSU Equity Fund - Direct - Growth", "MFAPI", "Thematic", "Aditya Birla Sun Life Mutual Fund"),
                 ("MUTUAL_FUND", "147946", "Bandhan Small Cap Fund - Direct Plan - Growth", "MFAPI", "Small Cap", "Bandhan Mutual Fund"),
                 ("MUTUAL_FUND", "140228", "Edelweiss Mid Cap Fund - Direct Plan - Growth", "MFAPI", "Mid Cap", "Edelweiss Mutual Fund"),
-                ("MUTUAL_FUND", "147701", "Motilal Oswal Large and Midcap Fund - Regular Plan - Growth", "MFAPI", "Large & Mid Cap", "Motilal Oswal Mutual Fund"),
-                ("MUTUAL_FUND", "122639", "Parag Parikh Flexi Cap Fund - Direct Plan - Growth", "MFAPI", "Flexi Cap", "PPFAS Mutual Fund")
+                ("MUTUAL_FUND", "147701", "Motilal Oswal Large and Midcap Fund - Regular Plan - Growth", "MFAPI", "Large & Mid Cap", "Motilal Oswal Mutual Fund")
             ]
             for asset_type, sym, name, exch, sec, amc in funds:
                 holding_repo.create(demo_user.id, HoldingCreate(

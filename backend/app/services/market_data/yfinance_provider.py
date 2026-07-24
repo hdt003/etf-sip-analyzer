@@ -20,6 +20,7 @@ POPULAR_ETFS = [
     {"symbol": "CPSEETF.NS", "name": "CPSE ETF", "sector": "Public Sector", "amc": "Nippon India"},
     {"symbol": "PHARMABEES.NS", "name": "Nippon India ETF Nifty Pharma", "sector": "Healthcare", "amc": "Nippon India"},
     {"symbol": "SMALLCAP.NS", "name": "HDFC Nifty Smallcap 250 ETF", "sector": "Smallcap", "amc": "HDFC Mutual Fund"},
+    {"symbol": "VAL30IETF.NS", "name": "ICICI Prudential Nifty200 Value 30 ETF", "sector": "Factor / Value", "amc": "ICICI Prudential"},
 ]
 
 
@@ -64,7 +65,7 @@ class YFinanceDataProvider(BaseMarketDataProvider):
         hist = hist.reset_index()
         hist["DateStr"] = hist["Date"].dt.strftime("%Y-%m-%d")
 
-        # drop rows where Close is NaN (yfinance appends incomplete today row)
+        # drop rows where Close is NaN
         hist = hist.dropna(subset=["Close"])
         hist = hist[hist["Close"] > 0]
 
@@ -83,18 +84,36 @@ class YFinanceDataProvider(BaseMarketDataProvider):
         if not history_records:
             raise ValueError(f"No valid price records parsed for {ticker_symbol}")
 
-        current_price = _safe_float(hist.iloc[-1]["Close"])
-        prev_price = _safe_float(hist.iloc[-2]["Close"]) if len(hist) >= 2 else current_price
+        current_price = history_records[-1]["close"]
+        prev_price = history_records[-2]["close"] if len(history_records) >= 2 else current_price
 
-        max_idx = hist["Close"].idxmax()
-        ath_price = _safe_float(hist.loc[max_idx, "Close"])
-        ath_date = str(hist.loc[max_idx, "DateStr"])
+        # Enrich with live / real-time fast_info from Yahoo Finance to avoid stale historical close
+        try:
+            fi = ticker.fast_info
+            real_last = _safe_float(getattr(fi, "last_price", 0))
+            real_prev = _safe_float(getattr(fi, "previous_close", 0))
+            if real_last > 0:
+                current_price = real_last
+                today_str = datetime.now().strftime("%Y-%m-%d")
+                if history_records and history_records[-1]["date"] == today_str:
+                    history_records[-1]["close"] = real_last
+                else:
+                    history_records.append({"date": today_str, "close": real_last})
+            if real_prev > 0:
+                prev_price = real_prev
+        except Exception:
+            pass
 
-        last_250 = hist.tail(250)
-        low_52w = _safe_float(last_250["Close"].min())
-        high_52w = _safe_float(last_250["Close"].max())
+        # Calculate ATH & 52-week metrics with updated history
+        ath_price = max([r["close"] for r in history_records])
+        ath_record = next(r for r in history_records if r["close"] == ath_price)
+        ath_date = ath_record["date"]
 
-        # Today's change
+        last_250_closes = [r["close"] for r in history_records[-250:]]
+        low_52w = min(last_250_closes)
+        high_52w = max(last_250_closes)
+
+        # Today's percentage change
         today_change_pct = 0.0
         if prev_price > 0:
             today_change_pct = round(((current_price - prev_price) / prev_price) * 100.0, 2)
