@@ -32,11 +32,11 @@ INDICES = [
     },
     {
         "key": "niftymidcap150",
-        "ticker": "^NSMIDCP",
-        "fallback_ticker": "NIFTYMIDCAP150.NS",
+        "ticker": "NIFTYMIDCAP150.NS",
+        "fallback_ticker": "^NSMIDCP",
         "display_name": "Nifty Midcap 150",
         "label": "NIFTY MIDCAP 150",
-        "description": "150 mid-cap companies ranked 101–250 by market cap",
+        "description": "150 mid-cap companies ranked 101-250 by market cap",
         "color": "violet",
     },
     {
@@ -65,10 +65,9 @@ def _fetch_index(ticker_symbol: str, fallback: str | None = None) -> Dict[str, A
     """Fetch index data via yfinance. Tries multiple history periods as fallback."""
     candidates = [ticker_symbol] + ([fallback] if fallback else [])
     # Try progressively shorter periods if 'max' is not available for some indices
-    PERIODS = ["max", "5y", "2y", "1y"]
-
     for sym in candidates:
-        for period in PERIODS:
+        periods = ["5d", "1d"] if sym == "^CNXSC" else ["max", "5y", "2y", "1y", "5d", "1d"]
+        for period in periods:
             try:
                 ticker = yf.Ticker(sym)
                 hist = ticker.history(period=period)

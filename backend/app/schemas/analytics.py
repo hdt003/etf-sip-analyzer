@@ -35,6 +35,7 @@ class PeakAnalysisItem(BaseModel):
     asset_type: str
     current_price: float
     ath_or_peak_nav: float
+    ath_date: Optional[str] = ""
     down_pct: float
     color_status: str  # 'Green' (within 5%), 'Yellow' (5-15%), 'Red' (>15%)
     buy_score: int

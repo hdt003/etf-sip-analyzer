@@ -176,6 +176,7 @@ class AnalyticsService:
                 "asset_type": h.asset_type,
                 "current_price": round(cur_price, 4),
                 "ath_or_peak_nav": round(ath_price, 4),
+                "ath_date": mdata.get("ath_date", ""),
                 "down_pct": down_pct,
                 "today_change_pct": today_change_pct,
                 "color_status": color_status,

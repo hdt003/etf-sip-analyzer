@@ -93,7 +93,7 @@ function renderPeakTables(items) {
     const mfs = items.filter(x => x.asset_type === "MUTUAL_FUND");
 
     if (etfs.length === 0) {
-        etfTbody.innerHTML = `<tr><td colspan="7" class="px-4 py-8 text-center text-slate-500 text-xs">
+        etfTbody.innerHTML = `<tr><td colspan="8" class="px-4 py-8 text-center text-slate-500 text-xs">
             No ETFs tracked yet.<br><span class="text-emerald-400">Search an ETF (e.g. HDFCSILVER) above to fetch & add</span>
         </td></tr>`;
     } else {
@@ -101,7 +101,7 @@ function renderPeakTables(items) {
     }
 
     if (mfs.length === 0) {
-        mfTbody.innerHTML = `<tr><td colspan="7" class="px-4 py-8 text-center text-slate-500 text-xs">
+        mfTbody.innerHTML = `<tr><td colspan="8" class="px-4 py-8 text-center text-slate-500 text-xs">
             No Mutual Funds tracked yet.<br><span class="text-blue-400">Search a Mutual Fund (e.g. SBI Small Cap) above to fetch & add</span>
         </td></tr>`;
     } else {
@@ -137,7 +137,7 @@ function createRowHTML(item, isRetryRow = false) {
                 <div class="font-semibold text-slate-400 text-xs leading-tight">${item.name}</div>
                 <div class="text-[10px] text-slate-600 font-mono mt-0.5">${item.symbol_or_code}</div>
             </td>
-            <td colspan="4" class="px-3 py-2.5">
+            <td colspan="5" class="px-3 py-2.5">
                 <div class="flex items-center gap-2 flex-wrap">
                     <span class="badge-red text-[10px] px-2 py-0.5 rounded font-bold">⚠ Fetch Error</span>
                     <span class="text-[10px] text-slate-500 leading-tight max-w-[160px] md:max-w-xs truncate" title="${item.score_reasons || ''}">${item.score_reasons || 'Connection timeout'}</span>
@@ -165,6 +165,7 @@ function createRowHTML(item, isRetryRow = false) {
                 <span class="${todayColor} text-xs font-semibold">${todaySign} ${Math.abs(todayPct).toFixed(2)}%</span>
             </td>
             <td class="px-3 md:px-4 py-3 text-slate-300 text-xs whitespace-nowrap col-ath">${fmtNav(item.ath_or_peak_nav)}</td>
+            <td class="px-3 md:px-4 py-3 text-slate-400 text-xs font-mono whitespace-nowrap col-date">${item.ath_date || '—'}</td>
             <td class="px-3 md:px-4 py-3 whitespace-nowrap col-down">
                 <span class="${dipBadge} text-xs px-2.5 py-1 rounded-full font-bold">-${item.down_pct}%</span>
             </td>
