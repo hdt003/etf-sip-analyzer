@@ -59,6 +59,7 @@ def analyze_asset_on_the_fly(
 
     cur_p = mdata.get("current_price", 0.0)
     ath_p = mdata.get("ath_price", cur_p)
+    today_change_pct = mdata.get("today_change_pct", 0.0)
 
     if cur_p <= 0 or ath_p <= 0:
         raise HTTPException(
@@ -91,6 +92,7 @@ def analyze_asset_on_the_fly(
         "asset_type": mdata.get("asset_type", resolved_asset_type or "MUTUAL_FUND"),
         "current_price": round(cur_p, 4),
         "ath_or_peak_nav": round(ath_p, 4),
+        "today_change_pct": today_change_pct,
         "ath_date": mdata.get("ath_date"),
         "down_pct": down_pct,
         "color_status": color_status,
