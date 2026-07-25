@@ -3,6 +3,9 @@ let selectedModalSymbol = null;
 let selectedModalName = null;
 let selectedModalType = null;
 
+// All known tabs
+const ALL_TABS = ["tab-peak", "tab-indices", "tab-alerts", "tab-sip"];
+
 document.addEventListener("DOMContentLoaded", () => {
     loadPeakAnalysis();
     setupDirectSearchAutocomplete();
@@ -22,22 +25,37 @@ function hideLoader() {
     if (el) el.classList.add("hidden");
 }
 
-// ─── Tab Switching (2 tabs only) ──────────────────────────
+// ─── Tab Switching ────────────────────────────────────────
 function switchTab(tabId) {
-    ["tab-peak", "tab-sip"].forEach(t => {
+    ALL_TABS.forEach(t => {
         document.getElementById(t)?.classList.add("hidden");
         const btn = document.getElementById(`btn-${t}`);
-        if (btn) { btn.classList.remove("bg-blue-600", "text-white"); btn.classList.add("text-slate-400", "hover:bg-slate-800"); }
+        if (btn) {
+            btn.classList.remove("bg-blue-600", "text-white");
+            btn.classList.add("text-slate-400", "hover:bg-slate-800");
+        }
     });
+
     document.getElementById(tabId)?.classList.remove("hidden");
     const activeBtn = document.getElementById(`btn-${tabId}`);
-    if (activeBtn) { activeBtn.classList.remove("text-slate-400", "hover:bg-slate-800"); activeBtn.classList.add("bg-blue-600", "text-white"); }
+    if (activeBtn) {
+        activeBtn.classList.remove("text-slate-400", "hover:bg-slate-800");
+        activeBtn.classList.add("bg-blue-600", "text-white");
+    }
+
+    // Lazy-load data for Indices and Alerts tabs
+    if (tabId === "tab-indices") loadIndices();
+    if (tabId === "tab-alerts") loadAlerts();
 }
 
 // ─── Helper: safe number formatting ───────────────────────
 function fmtNav(val) {
     if (val === null || val === undefined || isNaN(val) || val === 0) return "—";
     return `₹${parseFloat(val).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 4 })}`;
+}
+function fmtIdx(val) {
+    if (val === null || val === undefined || isNaN(val) || val === 0) return "—";
+    return parseFloat(val).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 function fmtPct(val) {
     if (val === null || val === undefined || isNaN(val)) return "—";
@@ -106,7 +124,6 @@ function createRowHTML(item, isRetryRow = false) {
     const todayColor = todayPct >= 0 ? "text-emerald-400" : "text-rose-400";
     const todaySign = todayPct >= 0 ? "▲" : "▼";
 
-    // Escape symbol safely for use in onclick attributes
     const symEsc = item.symbol_or_code.replace(/'/g, "\\'");
 
     const tr = document.createElement("tr");
@@ -115,7 +132,6 @@ function createRowHTML(item, isRetryRow = false) {
     tr.setAttribute("data-type", item.asset_type);
 
     if (isError) {
-        // Compact error row with inline retry button
         tr.innerHTML = `
             <td class="px-3 py-2.5 col-name">
                 <div class="font-semibold text-slate-400 text-xs leading-tight">${item.name}</div>
@@ -180,11 +196,9 @@ async function removeHolding(symbol) {
 
 // ─── Retry a single error row in-place ────────────────────
 async function retryRow(symbol, btnEl) {
-    // Find the row element
     const tr = btnEl.closest("tr");
     if (!tr) return;
 
-    // Show inline spinner on the button
     const retryIcon = btnEl.querySelector(".retry-icon");
     if (retryIcon) retryIcon.textContent = "⏳";
     btnEl.disabled = true;
@@ -197,12 +211,9 @@ async function retryRow(symbol, btnEl) {
             throw new Error(errData.detail || `HTTP ${res.status}`);
         }
         const data = await res.json();
-
-        // Build fresh row and replace the old error row
         const newRow = createRowHTML(data);
         tr.replaceWith(newRow);
     } catch (err) {
-        // Restore retry button with error hint
         if (retryIcon) retryIcon.textContent = "🔄";
         btnEl.disabled = false;
         btnEl.classList.remove("opacity-60");
@@ -218,7 +229,6 @@ async function fetchAndAnalyzeDirectly(code = null) {
     const inputVal = code || (inputEl ? inputEl.value.trim() : "");
     if (!inputVal) return;
 
-    // Close dropdown before showing loader
     const dd = document.getElementById("direct-search-dropdown");
     if (dd) dd.classList.add("hidden");
 
@@ -288,9 +298,7 @@ function renderDirectResult(data) {
             <div style="font-size:10px;color:#64748b;margin-top:3px;">${data.buy_recommendation}</div>
         </div>
     `;
-    // Show using inline style (the div uses display:grid via inline style)
     container.style.display = "grid";
-    // On desktop expand to 5 columns
     if (window.innerWidth >= 640) {
         container.style.gridTemplateColumns = "2fr 1fr 1fr 1fr";
     } else {
@@ -298,7 +306,429 @@ function renderDirectResult(data) {
     }
 }
 
-// ─── 3. SIP Calculator ────────────────────────────────────
+// ─── 3. Market Indices Tab ────────────────────────────────
+let indicesLoaded = false;
+
+async function loadIndices() {
+    // Only show full loader on first load; use button spin on refresh
+    const grid = document.getElementById("indices-grid");
+    const tbody = document.getElementById("indices-tbody");
+    const btn = document.getElementById("btn-refresh-indices");
+
+    if (!indicesLoaded) {
+        // Show skeleton cards
+        if (grid) grid.innerHTML = `
+            <div class="index-card-skeleton"></div>
+            <div class="index-card-skeleton"></div>
+            <div class="index-card-skeleton"></div>
+            <div class="index-card-skeleton"></div>
+        `;
+        if (tbody) tbody.innerHTML = `<tr><td colspan="8" class="px-4 py-8 text-center text-slate-500 text-xs">Fetching live index data...</td></tr>`;
+    }
+
+    if (btn) { btn.disabled = true; btn.textContent = "⏳ Loading..."; }
+
+    try {
+        const res = await fetch("/api/v1/indices");
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        renderIndexCards(data);
+        renderIndexTable(data);
+        indicesLoaded = true;
+    } catch (e) {
+        if (grid) grid.innerHTML = `<div style="grid-column:1/-1" class="text-center text-rose-400 text-xs py-10">⚠ Failed to load indices: ${e.message}</div>`;
+        if (tbody) tbody.innerHTML = `<tr><td colspan="8" class="px-4 py-6 text-center text-rose-400 text-xs">Error: ${e.message}</td></tr>`;
+    } finally {
+        if (btn) { btn.disabled = false; btn.textContent = "🔄 Refresh Indices"; }
+    }
+}
+
+function _indexColorClasses(idx) {
+    const colorMap = {
+        blue:   { ring: "border-blue-500",   glow: "shadow-blue-500/20",   pill: "badge-blue",   text: "text-blue-400",   bg: "from-blue-600/20 to-blue-500/5" },
+        indigo: { ring: "border-indigo-500",  glow: "shadow-indigo-500/20", pill: "badge-blue",   text: "text-indigo-400", bg: "from-indigo-600/20 to-indigo-500/5" },
+        violet: { ring: "border-violet-500",  glow: "shadow-violet-500/20", pill: "badge-blue",   text: "text-violet-400", bg: "from-violet-600/20 to-violet-500/5" },
+        amber:  { ring: "border-amber-500",   glow: "shadow-amber-500/20",  pill: "badge-yellow", text: "text-amber-400",  bg: "from-amber-600/20 to-amber-500/5" },
+    };
+    return colorMap[idx.color] || colorMap.blue;
+}
+
+function renderIndexCards(data) {
+    const grid = document.getElementById("indices-grid");
+    if (!grid) return;
+    grid.innerHTML = "";
+
+    data.forEach(idx => {
+        const cls = _indexColorClasses(idx);
+        const isOk = idx.status === "ok";
+
+        const todayPct = parseFloat(idx.today_change_pct || 0);
+        const todayColor = todayPct >= 0 ? "text-emerald-400" : "text-rose-400";
+        const todaySign = todayPct >= 0 ? "▲" : "▼";
+        const todayArrow = todayPct >= 0 ? "↑" : "↓";
+
+        let dipBadge = "badge-green";
+        if (idx.color_status === "Yellow") dipBadge = "badge-yellow";
+        if (idx.color_status === "Red")    dipBadge = "badge-red";
+
+        const downPct = parseFloat(idx.down_from_ath_pct || 0);
+        // Arc bar: 0% down = full green arc, 30% down = full red
+        const arcPct = Math.min(100, Math.max(0, 100 - (downPct / 30) * 100));
+        const arcColor = dipBadge === "badge-green" ? "#34d399" : dipBadge === "badge-yellow" ? "#fbbf24" : "#f87171";
+
+        const card = document.createElement("div");
+        card.className = `index-card glass-card rounded-2xl border-t-4 ${cls.ring} p-5 flex flex-col gap-3 transition-all hover:shadow-lg hover:${cls.glow} cursor-default`;
+
+        card.innerHTML = isOk ? `
+            <!-- Top: label + today change -->
+            <div class="flex items-start justify-between">
+                <div>
+                    <div class="text-[10px] font-bold uppercase tracking-widest ${cls.text} mb-0.5">${idx.label}</div>
+                    <div class="text-sm font-extrabold text-slate-100 leading-tight">${idx.display_name}</div>
+                    <div class="text-[10px] text-slate-500 mt-0.5 font-mono">${idx.ticker}</div>
+                </div>
+                <div class="text-right">
+                    <div class="${todayColor} text-sm font-bold">${todaySign} ${Math.abs(todayPct).toFixed(2)}%</div>
+                    <div class="text-[10px] text-slate-500">Today</div>
+                </div>
+            </div>
+
+            <!-- Current Value (big) -->
+            <div class="flex items-end justify-between">
+                <div>
+                    <div class="text-[10px] text-slate-500 uppercase tracking-wide">Current Value</div>
+                    <div class="text-2xl font-extrabold text-slate-100 leading-tight mt-0.5">${fmtIdx(idx.current_value)}</div>
+                </div>
+                <!-- Mini arc indicator -->
+                <div class="relative w-14 h-14 flex items-center justify-center" title="${downPct.toFixed(2)}% from ATH">
+                    <svg class="w-14 h-14 -rotate-90" viewBox="0 0 56 56">
+                        <circle cx="28" cy="28" r="22" fill="none" stroke="#1e293b" stroke-width="5"/>
+                        <circle cx="28" cy="28" r="22" fill="none" stroke="${arcColor}" stroke-width="5"
+                            stroke-dasharray="${(arcPct / 100) * 138.2} 138.2"
+                            stroke-linecap="round"/>
+                    </svg>
+                    <div class="absolute text-[9px] font-bold" style="color:${arcColor}">${downPct.toFixed(1)}%</div>
+                </div>
+            </div>
+
+            <!-- Divider -->
+            <div class="border-t border-slate-800/70"></div>
+
+            <!-- ATH row -->
+            <div class="grid grid-cols-2 gap-2 text-xs">
+                <div class="bg-slate-900/50 rounded-xl p-2.5">
+                    <div class="text-slate-500 text-[10px] uppercase tracking-wide">All-Time High</div>
+                    <div class="font-bold text-slate-200 mt-0.5">${fmtIdx(idx.ath_value)}</div>
+                    <div class="text-[10px] text-slate-600 font-mono mt-0.5">${idx.ath_date || "—"}</div>
+                </div>
+                <div class="bg-slate-900/50 rounded-xl p-2.5">
+                    <div class="text-slate-500 text-[10px] uppercase tracking-wide">Down from ATH</div>
+                    <div class="mt-0.5">
+                        <span class="${dipBadge} text-xs px-2 py-0.5 rounded-full font-bold">-${downPct.toFixed(2)}%</span>
+                    </div>
+                    <div class="text-[10px] text-slate-600 mt-1">${idx.color_status === "Green" ? "Near ATH ✓" : "Dip from ATH ↓"}</div>
+                </div>
+            </div>
+
+            <!-- 52-week range bar -->
+            <div>
+                <div class="flex justify-between text-[10px] text-slate-500 mb-1">
+                    <span>52W Low: ${fmtIdx(idx.low_52w)}</span>
+                    <span>52W High: ${fmtIdx(idx.high_52w)}</span>
+                </div>
+                <div class="h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                    <div class="h-full rounded-full transition-all" style="background:${arcColor};width:${
+                        idx.high_52w > idx.low_52w
+                            ? Math.min(100, ((idx.current_value - idx.low_52w) / (idx.high_52w - idx.low_52w)) * 100).toFixed(1)
+                            : 50
+                    }%"></div>
+                </div>
+            </div>
+        ` : `
+            <div class="flex flex-col items-center justify-center gap-3 py-5 text-center">
+                <div class="text-[10px] font-bold uppercase tracking-widest ${cls.text}">${idx.label}</div>
+                <div class="text-sm font-bold text-slate-300 leading-tight">${idx.display_name}</div>
+                <div class="flex flex-col items-center gap-2 mt-1">
+                    <div class="text-rose-400 text-[11px]">⚠ ${idx.error || "Data unavailable"}</div>
+                    <button
+                        data-index-key="${idx.key}"
+                        onclick="retryIndexCard('${idx.key}', this)"
+                        class="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-400 rounded-lg text-[10px] font-bold transition-all">
+                        <span class="retry-icon">🔄</span> Retry
+                    </button>
+                </div>
+            </div>
+        `;
+
+        grid.appendChild(card);
+    });
+}
+
+function renderIndexTable(data) {
+    const tbody = document.getElementById("indices-tbody");
+    if (!tbody) return;
+    tbody.innerHTML = "";
+
+    data.forEach(idx => {
+        const cls = _indexColorClasses(idx);
+        const isOk = idx.status === "ok";
+        const todayPct = parseFloat(idx.today_change_pct || 0);
+        const todayColor = todayPct >= 0 ? "text-emerald-400" : "text-rose-400";
+        const todaySign = todayPct >= 0 ? "▲" : "▼";
+        const downPct = parseFloat(idx.down_from_ath_pct || 0);
+        let dipBadge = "badge-green";
+        if (idx.color_status === "Yellow") dipBadge = "badge-yellow";
+        if (idx.color_status === "Red")    dipBadge = "badge-red";
+
+        const tr = document.createElement("tr");
+        tr.className = "border-b border-slate-800/70 hover:bg-slate-800/30 transition-colors";
+
+        if (!isOk) {
+            tr.setAttribute("data-index-key", idx.key);
+            tr.innerHTML = `
+                <td colspan="8" class="px-4 py-3">
+                    <div class="flex items-center gap-3 flex-wrap">
+                        <span class="${cls.text} font-semibold text-xs">${idx.display_name}</span>
+                        <span class="text-rose-400 text-[11px]">⚠ ${idx.error}</span>
+                        <button
+                            data-index-key="${idx.key}"
+                            onclick="retryIndexCard('${idx.key}', this)"
+                            class="flex items-center gap-1 px-2.5 py-1 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-400 rounded text-[10px] font-bold transition-all">
+                            <span class="retry-icon">🔄</span> Retry
+                        </button>
+                    </div>
+                </td>`;
+        } else {
+            tr.innerHTML = `
+                <td class="px-4 py-3">
+                    <div class="font-semibold text-slate-200 text-xs">${idx.display_name}</div>
+                    <div class="text-[10px] ${cls.text} font-bold">${idx.label}</div>
+                </td>
+                <td class="px-4 py-3 font-bold text-slate-100 text-xs whitespace-nowrap">${fmtIdx(idx.current_value)}</td>
+                <td class="px-4 py-3 whitespace-nowrap">
+                    <span class="${todayColor} text-xs font-semibold">${todaySign} ${Math.abs(todayPct).toFixed(2)}%</span>
+                </td>
+                <td class="px-4 py-3 text-slate-300 text-xs whitespace-nowrap font-semibold">${fmtIdx(idx.ath_value)}</td>
+                <td class="px-4 py-3 text-slate-500 text-[11px] font-mono whitespace-nowrap">${idx.ath_date || "—"}</td>
+                <td class="px-4 py-3 whitespace-nowrap">
+                    <span class="${dipBadge} text-xs px-2.5 py-1 rounded-full font-bold">-${downPct.toFixed(2)}%</span>
+                </td>
+                <td class="px-4 py-3 text-slate-400 text-xs whitespace-nowrap">${fmtIdx(idx.high_52w)}</td>
+                <td class="px-4 py-3 text-slate-400 text-xs whitespace-nowrap">${fmtIdx(idx.low_52w)}</td>
+            `;
+        }
+        tbody.appendChild(tr);
+    });
+}
+
+// ─── Retry a single failed index card ────────────────────
+async function retryIndexCard(indexKey, btnEl) {
+    const retryIcon = btnEl.querySelector(".retry-icon");
+    if (retryIcon) retryIcon.textContent = "⏳";
+    btnEl.disabled = true;
+
+    try {
+        const res = await fetch("/api/v1/indices");
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        const found = data.find(d => d.key === indexKey);
+        if (!found) throw new Error("Index not found in response");
+
+        if (found.status !== "ok") {
+            throw new Error(found.error || "Still unavailable");
+        }
+
+        // Re-render just this card in the grid
+        const grid = document.getElementById("indices-grid");
+        if (grid) {
+            // Find the card with the retry button and replace it
+            const oldCard = btnEl.closest(".index-card");
+            if (oldCard) {
+                // Rebuild full grid (simplest + correct approach)
+                renderIndexCards(data);
+                renderIndexTable(data);
+                return;
+            }
+        }
+        // Fallback: full reload
+        renderIndexCards(data);
+        renderIndexTable(data);
+    } catch (err) {
+        if (retryIcon) retryIcon.textContent = "🔄";
+        btnEl.disabled = false;
+        btnEl.title = `Error: ${err.message}`;
+    }
+}
+
+// ─── 4. Alerts Tab ────────────────────────────────────────
+async function loadAlerts() {
+    const container = document.getElementById("alerts-container");
+    if (!container) return;
+    container.innerHTML = `<div class="text-center text-slate-500 text-xs py-10 animate-pulse">Loading alerts...</div>`;
+
+    try {
+        const res = await fetch("/api/v1/alerts");
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const alerts = await res.json();
+        renderAlerts(alerts);
+    } catch (e) {
+        container.innerHTML = `<div class="text-center text-rose-400 text-xs py-10">⚠ ${e.message}</div>`;
+    }
+}
+
+function renderAlerts(alerts) {
+    const container = document.getElementById("alerts-container");
+    if (!container) return;
+
+    if (!alerts || alerts.length === 0) {
+        container.innerHTML = `
+            <div class="glass-card rounded-2xl p-10 text-center space-y-3">
+                <div class="text-3xl">🔔</div>
+                <div class="text-slate-400 text-sm font-semibold">No alerts configured yet</div>
+                <div class="text-slate-500 text-xs">Create an alert above to get notified when an asset falls from its peak</div>
+            </div>`;
+        return;
+    }
+
+    container.innerHTML = "";
+    alerts.forEach(alert => {
+        const card = document.createElement("div");
+        card.className = "alert-card glass-card rounded-2xl p-4 flex items-center justify-between gap-3";
+        card.setAttribute("id", `alert-${alert.id}`);
+
+        const isActive = alert.is_active;
+        const isTriggered = !!alert.last_triggered_at;
+
+        let statusDot = isTriggered
+            ? '<span class="w-2 h-2 rounded-full bg-rose-400 inline-block animate-pulse"></span>'
+            : isActive
+            ? '<span class="w-2 h-2 rounded-full bg-emerald-400 inline-block"></span>'
+            : '<span class="w-2 h-2 rounded-full bg-slate-600 inline-block"></span>';
+
+        let statusLabel = isTriggered ? "Triggered 🔴" : isActive ? "Active" : "Paused";
+        let statusColor = isTriggered ? "text-rose-400" : isActive ? "text-emerald-400" : "text-slate-500";
+
+        const dropLabel = `${alert.drop_percentage}% Drop`;
+        const typeLabel = alert.target_type === "PEAK_NAV_DROP" ? "Peak NAV" : "ATH";
+        const assetBadge = alert.asset_type === "MUTUAL_FUND"
+            ? '<span class="bg-blue-500/20 text-blue-400 text-[10px] px-1.5 py-0.5 rounded font-bold">MF</span>'
+            : '<span class="bg-emerald-500/20 text-emerald-400 text-[10px] px-1.5 py-0.5 rounded font-bold">ETF</span>';
+
+        card.innerHTML = `
+            <div class="flex items-center gap-3 flex-1 min-w-0">
+                ${statusDot}
+                <div class="min-w-0">
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <div class="font-semibold text-slate-200 text-xs truncate">${alert.asset_name || alert.symbol_or_code}</div>
+                        ${assetBadge}
+                    </div>
+                    <div class="text-[10px] text-slate-500 font-mono">${alert.symbol_or_code}</div>
+                    <div class="text-[11px] text-slate-500 mt-0.5 flex items-center gap-2 flex-wrap">
+                        <span class="badge-yellow text-[10px] px-1.5 py-0.5 rounded font-bold">-${dropLabel} from ${typeLabel}</span>
+                        <span class="${statusColor} font-semibold">${statusLabel}</span>
+                        ${alert.last_triggered_at ? `<span class="text-slate-600 font-mono text-[10px]">last triggered: ${new Date(alert.last_triggered_at).toLocaleDateString('en-IN')}</span>` : ""}
+                    </div>
+                </div>
+            </div>
+            <div class="flex items-center gap-2 shrink-0">
+                <!-- Toggle -->
+                <button onclick="toggleAlert(${alert.id})"
+                    class="px-3 py-1.5 rounded-lg text-[10px] font-bold border transition-all ${isActive ? 'border-slate-700 text-slate-400 hover:border-amber-500/50 hover:text-amber-400' : 'border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10'}"
+                    title="${isActive ? 'Pause alert' : 'Activate alert'}">
+                    ${isActive ? "⏸ Pause" : "▶ Activate"}
+                </button>
+                <!-- Delete -->
+                <button onclick="deleteAlert(${alert.id})"
+                    class="px-3 py-1.5 rounded-lg text-[10px] font-bold border border-slate-700 text-slate-500 hover:border-rose-500/40 hover:text-rose-400 transition-all"
+                    title="Delete alert">
+                    🗑
+                </button>
+            </div>
+        `;
+        container.appendChild(card);
+    });
+}
+
+async function toggleAlert(alertId) {
+    try {
+        const res = await fetch(`/api/v1/alerts/${alertId}/toggle`, { method: "PUT" });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        await loadAlerts();
+    } catch (e) {
+        console.error("Toggle error:", e);
+    }
+}
+
+async function deleteAlert(alertId) {
+    try {
+        const res = await fetch(`/api/v1/alerts/${alertId}`, { method: "DELETE" });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        // Animate removal
+        const card = document.getElementById(`alert-${alertId}`);
+        if (card) {
+            card.style.transition = "opacity 0.3s, transform 0.3s";
+            card.style.opacity = "0";
+            card.style.transform = "translateX(20px)";
+            setTimeout(() => loadAlerts(), 350);
+        } else {
+            await loadAlerts();
+        }
+    } catch (e) {
+        console.error("Delete error:", e);
+    }
+}
+
+async function createAlert() {
+    const symbolEl = document.getElementById("alert-symbol");
+    const typeEl = document.getElementById("alert-type");
+    const statusEl = document.getElementById("alert-create-status");
+
+    const symbol = symbolEl?.value.trim();
+    const selectedOption = typeEl?.value || "PRICE_DROP_15";
+
+    if (!symbol) {
+        if (statusEl) { statusEl.textContent = "⚠ Please enter a fund symbol or code."; statusEl.className = "text-xs mt-2 text-rose-400"; statusEl.classList.remove("hidden"); }
+        return;
+    }
+
+    // Parse drop pct from option value: "PRICE_DROP_15" → 15
+    const dropPct = parseFloat(selectedOption.replace("PRICE_DROP_", "")) || 15;
+    // Determine target type: ETF uses ATH_DROP, MF uses PEAK_NAV_DROP
+    // We detect by checking if symbol is numeric (MF code) or alphanumeric (ETF)
+    const isNumeric = /^\d+$/.test(symbol);
+    const targetType = isNumeric ? "PEAK_NAV_DROP" : "ATH_DROP";
+    const assetType = isNumeric ? "MUTUAL_FUND" : "ETF";
+
+    if (statusEl) { statusEl.textContent = "Creating alert..."; statusEl.className = "text-xs mt-2 text-slate-400 animate-pulse"; statusEl.classList.remove("hidden"); }
+
+    try {
+        const res = await fetch("/api/v1/alerts", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                symbol_or_code: symbol,
+                asset_name: symbol,
+                asset_type: assetType,
+                target_type: targetType,
+                drop_percentage: dropPct
+            })
+        });
+        if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            throw new Error(err.detail || `HTTP ${res.status}`);
+        }
+        if (statusEl) { statusEl.textContent = `✓ Alert created for ${symbol} — ${dropPct}% drop threshold`; statusEl.className = "text-xs mt-2 text-emerald-400"; }
+        if (symbolEl) symbolEl.value = "";
+        setTimeout(() => {
+            if (statusEl) statusEl.classList.add("hidden");
+            loadAlerts();
+        }, 1500);
+    } catch (e) {
+        if (statusEl) { statusEl.textContent = `⚠ ${e.message}`; statusEl.className = "text-xs mt-2 text-rose-400"; }
+    }
+}
+
+// ─── 5. SIP Calculator ────────────────────────────────────
 async function runSipCalculator() {
     const inv = parseFloat(document.getElementById("calc-monthly-inv")?.value) || 10000;
     const rate = parseFloat(document.getElementById("calc-rate")?.value) || 12.0;
@@ -360,7 +790,7 @@ async function addHoldingFromModal() {
     }
 }
 
-// ─── Dropdown builder — uses addEventListener (NOT inline onclick) ───
+// ─── Dropdown builder ─────────────────────────────────────
 function buildDropdown(container, results, onSelect) {
     container.innerHTML = "";
 
@@ -385,10 +815,8 @@ function buildDropdown(container, results, onSelect) {
 
         row.addEventListener("mouseenter", () => row.style.background = "#1e293b");
         row.addEventListener("mouseleave", () => row.style.background = "");
-
-        // Use mousedown (fires before blur which hides dropdown)
         row.addEventListener("mousedown", e => {
-            e.preventDefault();   // prevent input losing focus before click fires
+            e.preventDefault();
             onSelect(item.symbol_or_code, item.name, item.asset_type);
         });
 

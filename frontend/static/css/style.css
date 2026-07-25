@@ -259,3 +259,135 @@ h1, h2, h3, h4, .font-display {
 .retry-btn:disabled {
   cursor: not-allowed;
 }
+
+/* ─── Market Indices Grid ───────────────────────────────── */
+.indices-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+@media (min-width: 900px) {
+  .indices-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+@media (max-width: 480px) {
+  .indices-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ─── Index card ─────────────────────────────────────────── */
+.index-card {
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.index-card:hover {
+  transform: translateY(-3px);
+}
+.index-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at top right, rgba(99,102,241,0.07) 0%, transparent 60%);
+  pointer-events: none;
+}
+
+/* ─── Skeleton loader for index cards ───────────────────── */
+.index-card-skeleton {
+  height: 240px;
+  border-radius: 16px;
+  background: linear-gradient(90deg, rgba(30,41,59,0.7) 25%, rgba(51,65,85,0.5) 50%, rgba(30,41,59,0.7) 75%);
+  background-size: 400% 100%;
+  animation: skeleton-shimmer 1.4s ease-in-out infinite;
+  border: 1px solid rgba(255,255,255,0.05);
+}
+@keyframes skeleton-shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ─── Alert card ─────────────────────────────────────────── */
+.alert-card {
+  transition: opacity 0.3s, transform 0.3s;
+}
+.alert-card:hover {
+  background: rgba(30, 41, 59, 0.85);
+}
+
+/* ─── Mobile overrides for Indices tab ───────────────────── */
+@media (max-width: 640px) {
+  /* Index cards: reduce padding on mobile */
+  .index-card {
+    padding: 14px !important;
+    gap: 10px !important;
+  }
+  /* Make the big value text slightly smaller on very small screens */
+  .index-card .text-2xl {
+    font-size: 1.1rem !important;
+  }
+  /* Arc SVG: scale down slightly */
+  .index-card svg.w-14 {
+    width: 46px !important;
+    height: 46px !important;
+  }
+  /* Two-col inner grid: stack on tiny screens */
+  .index-card .grid.grid-cols-2 {
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+  }
+  /* Tighter inner mini boxes */
+  .index-card .bg-slate-900\/50 {
+    padding: 8px !important;
+  }
+  /* Comparison table: min width ensures scrolling */
+  #indices-tbody td,
+  #indices-tbody th {
+    padding: 8px 10px !important;
+    font-size: 10px !important;
+  }
+}
+
+/* ─── Mobile overrides for Alerts tab ───────────────────────*/
+@media (max-width: 640px) {
+  /* Alert card: ensure action buttons don't overflow */
+  .alert-card {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .alert-card > div:first-child {
+    min-width: 0;
+    flex: 1 1 60%;
+  }
+  .alert-card > div:last-child {
+    flex-shrink: 0;
+    display: flex;
+    gap: 6px;
+    align-items: center;
+  }
+  /* Make toggle/delete buttons slimmer on mobile */
+  .alert-card button {
+    padding: 5px 8px !important;
+    font-size: 10px !important;
+  }
+}
+
+/* ─── Very small screens (< 380px) ──────────────────────── */
+@media (max-width: 380px) {
+  .indices-grid {
+    grid-template-columns: 1fr;
+  }
+  .index-card-skeleton {
+    height: 200px;
+  }
+  /* Stack alert card content fully */
+  .alert-card {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .alert-card > div:last-child {
+    width: 100%;
+    justify-content: flex-end;
+  }
+}

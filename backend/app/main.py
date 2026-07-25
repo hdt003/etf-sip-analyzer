@@ -7,7 +7,7 @@ from fastapi.responses import HTMLResponse
 
 from backend.app.core.config import settings
 from backend.app.core.database import engine, Base
-from backend.app.api.v1 import auth, holdings, portfolio, prices, alerts, watchlist, history, search, calculators, export
+from backend.app.api.v1 import auth, holdings, portfolio, prices, alerts, watchlist, history, search, calculators, export, indices
 from backend.app.services.scheduler_service import scheduler_service
 from backend.app.services.market_data.market_data_service import MarketDataService
 from backend.app.repositories.holding_repository import HoldingRepository
@@ -55,6 +55,7 @@ app.include_router(history.router, prefix="/api/v1")
 app.include_router(search.router, prefix="/api/v1")
 app.include_router(calculators.router, prefix="/api/v1")
 app.include_router(export.router, prefix="/api/v1")
+app.include_router(indices.router, prefix="/api/v1")
 
 @app.on_event("startup")
 def startup_event():

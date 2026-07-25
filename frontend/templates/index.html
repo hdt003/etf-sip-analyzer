@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ app_name }}</title>
+    <meta name="description" content="Indian Mutual Funds & ETFs Buy the Dip Dashboard — Live ATH tracking, NIFTY index monitoring, price alerts, and Buy Opportunity Scores.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -24,7 +25,7 @@
         <div id="futuristic-loader-text" class="cyber-text text-sm font-bold uppercase tracking-widest text-center px-4">
             FETCHING LIVE DATA...
         </div>
-        <div class="text-[11px] text-slate-400 font-mono mt-2 animate-pulse">Calculating Peak NAV & ATH Matrix</div>
+        <div class="text-[11px] text-slate-400 font-mono mt-2 animate-pulse">Calculating Peak NAV &amp; ATH Matrix</div>
     </div>
 
     <!-- Header -->
@@ -33,7 +34,7 @@
             <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-600 via-indigo-500 to-emerald-400 flex items-center justify-center text-white shadow-lg shadow-blue-500/20 text-lg">📉</div>
             <div>
                 <h1 class="text-base md:text-xl font-extrabold tracking-tight bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">Buy the Dip Analyzer</h1>
-                <p class="text-[11px] text-slate-400 hidden md:block">MFAPI Real NAV & ETF ATH Tracker</p>
+                <p class="text-[11px] text-slate-400 hidden md:block">MFAPI Real NAV &amp; ETF ATH Tracker</p>
             </div>
         </div>
         <button onclick="openAddModal()" class="px-3 py-2 md:px-4 md:py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-semibold rounded-lg shadow-lg transition-all">
@@ -65,15 +66,19 @@
 
         <!-- Tabs -->
         <div class="tab-bar flex space-x-2 border-b border-slate-800 pb-2 overflow-x-auto">
-            <button id="btn-tab-peak" onclick="switchTab('tab-peak')" class="px-4 py-2 rounded-xl text-xs font-bold bg-blue-600 text-white transition-all whitespace-nowrap">🎯 Peak NAV & ATH</button>
+            <button id="btn-tab-peak" onclick="switchTab('tab-peak')" class="px-4 py-2 rounded-xl text-xs font-bold bg-blue-600 text-white transition-all whitespace-nowrap">🎯 Peak NAV &amp; ATH</button>
+            <button id="btn-tab-indices" onclick="switchTab('tab-indices')" class="px-4 py-2 rounded-xl text-xs font-bold text-slate-400 hover:bg-slate-800 transition-all whitespace-nowrap">📊 Market Indices</button>
+            <button id="btn-tab-alerts" onclick="switchTab('tab-alerts')" class="px-4 py-2 rounded-xl text-xs font-bold text-slate-400 hover:bg-slate-800 transition-all whitespace-nowrap">🔔 Alerts</button>
             <button id="btn-tab-sip" onclick="switchTab('tab-sip')" class="px-4 py-2 rounded-xl text-xs font-bold text-slate-400 hover:bg-slate-800 transition-all whitespace-nowrap">🧮 SIP Calc</button>
         </div>
 
-        <!-- Tab 1: ATH & Peak NAV Analysis -->
+        <!-- ═══════════════════════════════════════════════════ -->
+        <!-- Tab 1: ATH & Peak NAV Analysis                     -->
+        <!-- ═══════════════════════════════════════════════════ -->
         <div id="tab-peak" class="space-y-6">
             <div class="flex items-center justify-between">
                 <div>
-                    <h2 class="text-sm md:text-base font-bold text-slate-100">All-Time High (ATH) & Peak NAV Analysis</h2>
+                    <h2 class="text-sm md:text-base font-bold text-slate-100">All-Time High (ATH) &amp; Peak NAV Analysis</h2>
                     <p class="text-[11px] text-slate-400 mt-0.5">
                         <span class="text-emerald-400">●</span> Green &lt;5% &nbsp;
                         <span class="text-amber-400">●</span> Yellow 5-15% &nbsp;
@@ -81,7 +86,7 @@
                     </p>
                 </div>
                 <button onclick="loadPeakAnalysis()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl text-xs font-semibold transition-all">
-                    🔄 Refresh Prices & NAVs
+                    🔄 Refresh Prices &amp; NAVs
                 </button>
             </div>
 
@@ -136,7 +141,118 @@
             </div>
         </div>
 
-        <!-- Tab 2: SIP Calculator -->
+        <!-- ═══════════════════════════════════════════════════ -->
+        <!-- Tab 2: Market Indices                              -->
+        <!-- ═══════════════════════════════════════════════════ -->
+        <div id="tab-indices" class="hidden space-y-4">
+            <!-- Header row -->
+            <div class="flex items-start justify-between gap-3 flex-wrap">
+                <div class="flex-1 min-w-0">
+                    <h2 class="text-sm md:text-base font-bold text-slate-100">📊 Live Indian Market Indices</h2>
+                    <p class="text-[11px] text-slate-400 mt-0.5">Real-time data via Yahoo Finance · Compared against All-Time Highs</p>
+                </div>
+                <button onclick="loadIndices()" id="btn-refresh-indices" class="shrink-0 px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl text-xs font-semibold transition-all">
+                    🔄 Refresh
+                </button>
+            </div>
+
+            <!-- Legend -->
+            <div class="flex items-center gap-3 flex-wrap text-[10px] md:text-[11px]">
+                <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-emerald-400 inline-block"></span><span class="text-slate-400">&lt;5% from ATH — Near peak</span></span>
+                <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-rose-400 inline-block"></span><span class="text-slate-400">≥5% from ATH — Dip alert 🔴</span></span>
+            </div>
+
+            <!-- Index Cards Grid -->
+            <div id="indices-grid" class="indices-grid">
+                <!-- Skeleton cards while loading -->
+                <div class="index-card-skeleton"></div>
+                <div class="index-card-skeleton"></div>
+                <div class="index-card-skeleton"></div>
+                <div class="index-card-skeleton"></div>
+            </div>
+
+            <!-- Comparison table (hidden on small screens, shown as cards instead) -->
+            <div class="glass-card rounded-2xl overflow-hidden border-t-4 border-t-violet-500">
+                <div class="p-3 md:p-4 bg-slate-900/60 border-b border-slate-800 flex items-center justify-between">
+                    <h3 class="text-xs md:text-sm font-bold text-violet-400 uppercase tracking-wider">📋 Indices Comparison</h3>
+                    <span class="text-[10px] text-slate-500 md:hidden">← scroll</span>
+                </div>
+                <div class="overflow-x-auto -webkit-overflow-scrolling-touch">
+                    <table class="w-full text-left border-collapse text-xs" style="min-width:560px">
+                        <thead>
+                            <tr class="border-b border-slate-800 text-slate-400 uppercase text-[10px] tracking-wide bg-slate-900/40">
+                                <th class="px-3 md:px-4 py-3">Index</th>
+                                <th class="px-3 md:px-4 py-3">Current</th>
+                                <th class="px-3 md:px-4 py-3">Today</th>
+                                <th class="px-3 md:px-4 py-3">ATH</th>
+                                <th class="px-3 md:px-4 py-3">ATH Date</th>
+                                <th class="px-3 md:px-4 py-3">↓ from ATH</th>
+                                <th class="px-3 md:px-4 py-3">52W Hi</th>
+                                <th class="px-3 md:px-4 py-3">52W Lo</th>
+                            </tr>
+                        </thead>
+                        <tbody id="indices-tbody">
+                            <tr><td colspan="8" class="px-4 py-8 text-center text-slate-500 text-xs">Loading indices...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════ -->
+        <!-- Tab 3: Alerts                                      -->
+        <!-- ═══════════════════════════════════════════════════ -->
+        <div id="tab-alerts" class="hidden space-y-4">
+            <div class="flex items-start justify-between gap-3 flex-wrap">
+                <div class="flex-1 min-w-0">
+                    <h2 class="text-sm md:text-base font-bold text-slate-100">🔔 Price-Fall Alerts</h2>
+                    <p class="text-[11px] text-slate-400 mt-0.5">Get notified when an asset drops by a set % from its peak</p>
+                </div>
+                <button onclick="loadAlerts()" class="shrink-0 px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl text-xs font-semibold transition-all">
+                    🔄 Refresh
+                </button>
+            </div>
+
+            <!-- Add Alert Form -->
+            <div class="glass-card p-4 rounded-2xl border border-slate-700/50">
+                <h3 class="text-xs font-bold text-slate-300 uppercase tracking-wider mb-3">➕ Create New Alert</h3>
+                <div class="flex flex-col gap-3 text-xs">
+                    <!-- Row 1: Symbol input -->
+                    <div>
+                        <label class="text-slate-400 font-medium block mb-1">Fund / ETF Symbol or Code</label>
+                        <input id="alert-symbol" type="text" placeholder="e.g. 125494 or HDFCSILVER.NS"
+                               class="w-full bg-slate-900 border border-slate-800 rounded-lg p-2.5 text-slate-200 focus:border-blue-500 outline-none">
+                    </div>
+                    <!-- Row 2: Type + Button side by side -->
+                    <div class="flex gap-3">
+                        <div class="flex-1">
+                            <label class="text-slate-400 font-medium block mb-1">Drop Threshold</label>
+                            <select id="alert-type" class="w-full bg-slate-900 border border-slate-800 rounded-lg p-2.5 text-slate-200 focus:border-blue-500 outline-none">
+                                <option value="PRICE_DROP_5">5% Drop</option>
+                                <option value="PRICE_DROP_10">10% Drop</option>
+                                <option value="PRICE_DROP_15" selected>15% Drop</option>
+                                <option value="PRICE_DROP_20">20% Drop</option>
+                            </select>
+                        </div>
+                        <div class="flex items-end">
+                            <button onclick="createAlert()" class="px-4 py-2.5 bg-gradient-to-r from-violet-600 to-blue-600 hover:from-violet-500 hover:to-blue-500 text-white rounded-lg font-bold transition-all text-xs shadow-lg whitespace-nowrap">
+                                + Create
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <p id="alert-create-status" class="text-xs mt-2 hidden"></p>
+            </div>
+
+            <!-- Alerts List -->
+            <div id="alerts-container" class="space-y-2">
+                <div class="text-center text-slate-500 text-xs py-10">Loading alerts...</div>
+            </div>
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════ -->
+        <!-- Tab 4: SIP Calculator                             -->
+        <!-- ═══════════════════════════════════════════════════ -->
         <div id="tab-sip" class="hidden space-y-6">
             <div class="glass-card p-5 md:p-6 rounded-2xl max-w-2xl mx-auto space-y-5">
                 <div class="border-b border-slate-800 pb-3">
